@@ -37,6 +37,9 @@
   }
 }
 
+.robot-container {
+  transition: all ease 1s;
+}
 
 .robot-up{
   transform: rotate(180deg);
