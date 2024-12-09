@@ -36,3 +36,17 @@
     transform: rotate(360deg);
   }
 }
+
+
+.robot-up{
+  transform: rotate(180deg);
+}
+.robot-down{
+  transform: rotate(0deg);
+}
+.robot-left{
+  transform: rotate(90deg);
+}
+.robot-right{
+  transform: rotate(-90deg);
+}

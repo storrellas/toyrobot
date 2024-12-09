@@ -3,47 +3,33 @@ import './App.css';
 import { useEffect, useRef, useState } from 'react';
 import robot from './assets/robot.png';
 
+const DIRECTION = {
+  UP: 'UP', RIGHT: 'RIGHT', DOWN: 'DOWN', LEFT: 'LEFT'
+}
+
 
 const BoardRow = (props) => {
+
   return  <div className="d-flex flex-grow-1 justify-content-around">
-            <div className="border text-center p-2" style={{ width: props.width, height: props.height}}> 
-              {props.row === props.robotPosition.y && props.robotPosition.x === 0 &&
-                <img src={robot} alt="robot" style={{ height: '100%'}} />
-              }
-              
+            <div className="border text-center p-2" style={{ width: props.width, height: props.height}}>              
             </div>
             <div className="border text-center p-2" style={{ width: props.width, height: props.height}}>
-              {props.row === props.robotPosition.y && props.robotPosition.x === 1 &&
-                <img src={robot} alt="robot" style={{ height: '100%'}} />
-              }
             </div>
             <div className="border text-center p-2" style={{ width: props.width, height: props.height}}>
-              {props.row === props.robotPosition.y && props.robotPosition.x === 2 &&
-                <img src={robot} alt="robot" style={{ height: '100%'}} />
-              }
             </div>
             <div className="border text-center p-2" style={{ width: props.width, height: props.height}}>
-              {props.row === props.robotPosition.y && props.robotPosition.x === 3 &&
-                <img src={robot} alt="robot" style={{ height: '100%'}} /> 
-              }
             </div>
             <div className="border text-center p-2" style={{ width: props.width, height: props.height}}>
-              {props.row === props.robotPosition.y && props.robotPosition.x === 3 &&
-              <img src={robot} alt="robot" style={{ height: '100%'}} />
-              }
             </div>
           </div>
 }
 
-const DIRECTION = {
-  UP: 'UP', RIGHT: 'RIGHT', DOWN: 'DOWN', LEFT: 'LEFT'
-}
 
 const App = () => {
   const boardRef = useRef(null);
   const [height, setHeight] = useState(0);
   const [width, setWidth] = useState(0);
-  const [ robotPosition, setRobotPosition ] = useState({ x: 0, y: 0, direction: DIRECTION.UP});
+  const [ robotPosition, setRobotPosition ] = useState({ x: 2, y: 0, direction: DIRECTION.LEFT});
   
   useEffect( () => {
     const width = boardRef.current ? boardRef.current.clientWidth : 0
@@ -58,6 +44,13 @@ const App = () => {
     }
   }, [])
 
+  // Compute class robot
+  let classRobot = ""
+  if (robotPosition.direction === DIRECTION.UP) classRobot = "robot-up"
+  if (robotPosition.direction === DIRECTION.DOWN) classRobot = "robot-down"
+  if (robotPosition.direction === DIRECTION.LEFT) classRobot = "robot-left"
+  if (robotPosition.direction === DIRECTION.RIGHT) classRobot = "robot-right"
+
   return <main className="vh-100 vw-100 d-flex flex-column">
           <section className="text-center p-3 bg-dark text-light">
             <h1>Toy Robot</h1>
@@ -66,7 +59,11 @@ const App = () => {
             
             <div className="w-50 p-3 d-flex flex-column" >
               <h2>Board</h2>
-              <div className="flex-grow-1" ref={boardRef}>
+              <div className="flex-grow-1 position-relative" ref={boardRef}>
+                <div className="position-absolute text-center p-2" 
+                  style={{ width: width, height: height, top: height*robotPosition.y, left: width*robotPosition.x }}>
+                  <img className={classRobot} src={robot} alt="robot" style={{ height: '100%'}} /> 
+                </div>
                 <BoardRow height={height} width={width} row={0} robotPosition={robotPosition} />
                 <BoardRow height={height} width={width} row={1} robotPosition={robotPosition}  />
                 <BoardRow height={height} width={width} row={2} robotPosition={robotPosition}  />
