@@ -6,7 +6,7 @@ const DIRECTION = {
   NORTH: 'NORTH', WEST: 'WEST', SOUTH: 'SOUTH', EAST: 'EAST'
 }
 
-function useInterval(callback, delay) {
+const useInterval = (callback, delay) => {
   const savedCallback = useRef();
  
   // Remember the latest callback.
@@ -26,9 +26,29 @@ function useInterval(callback, delay) {
   }, [delay]);
 }
 
+const useTimeout = (callback, delay) => {
+  const savedCallback = useRef();
+ 
+  // Remember the latest callback.
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
+ 
+  // Set up the interval.
+  useEffect(() => {
+    function tick() {
+      savedCallback.current();
+    }
+    if (delay !== null) {
+      let id = setTimeout(tick, delay);
+      return () => clearInterval(id);
+    }
+  }, [delay]);
+}
+
 const BoardRow = (props) => {
 
-  return  <div className="d-flex flex-grow-1 justify-content-around">
+  return  <div className="d-flex flex-grow-1">
             <div className="border text-center p-2" style={{ width: props.width, height: props.height}}>              
             </div>
             <div className="border text-center p-2" style={{ width: props.width, height: props.height}}>
@@ -44,41 +64,36 @@ const BoardRow = (props) => {
 
 const BOARD_SIZE = 5;
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 const App = () => {
   const boardRef = useRef(null);
   const [height, setHeight] = useState(0);
   const [width, setWidth] = useState(0);
-  const [ robotPosition, setRobotPosition ] = useState({ x: 0, y: 0, direction: DIRECTION.NORTH});
+  const [ robotPosition, setRobotPosition ] = useState({ x: 3, y: 1, direction: DIRECTION.NORTH});
   const [ commandString, setCommandString ] = useState('')
   const [ commandList, setCommandList ] = useState([])
   const [ interval, setInterval ] = useState(null)
+  const [ timeout, setTimeout ] = useState(null)
+  const [ showReport, setShowReport ] = useState(false)
+  const [ executingText, setExecutingText ] = useState(null)
 
   useEffect( () => {
     const width = boardRef.current ? boardRef.current.clientWidth : 0
     const height = boardRef.current ? boardRef.current.clientHeight : 0
 
     if( width > height) {
-      setHeight(height / 5);
-      setWidth(height / 5);
+      setHeight(height / BOARD_SIZE);
+      setWidth(height / BOARD_SIZE);
     }else{
-      setHeight(width / 5);
-      setWidth(width / 5);
+      setHeight(width / BOARD_SIZE);
+      setWidth(width / BOARD_SIZE);
     }
   }, [])
 
-  const onExecute = async (e) => {
-    const commandList = commandString.split('\n')
-    setCommandList(commandList)
-    setInterval(1000)
-  }
 
   useInterval(() => {
+    
     const command = commandList.shift().trim()
-    console.log("Executing ", command)
+    setExecutingText(`Executing ${command}`)
 
     const commandSplit = command.split(' ')
     const commandKey = commandSplit[0]
@@ -101,11 +116,69 @@ const App = () => {
       }
     }
 
-    if( commandList.length === 0) setInterval(null)
+    // REPORT
+    if( commandKey === 'REPORT') setShowReport(true)
+    else setShowReport(false)
+
+    // LEFT
+    if( commandKey === 'LEFT'){
+      let targetDirection = null;
+      if( robotPosition.direction === DIRECTION.NORTH) targetDirection = DIRECTION.EAST
+      if( robotPosition.direction === DIRECTION.EAST) targetDirection = DIRECTION.SOUTH
+      if( robotPosition.direction === DIRECTION.SOUTH) targetDirection = DIRECTION.WEST
+      if( robotPosition.direction === DIRECTION.WEST)  targetDirection = DIRECTION.NORTH
+
+      setRobotPosition({ ...robotPosition, direction: targetDirection})      
+    }    
+
+    // RIGHT
+    if( commandKey === 'RIGHT'){
+      let targetDirection = null;
+      if( robotPosition.direction === DIRECTION.NORTH) targetDirection = DIRECTION.WEST        
+      if( robotPosition.direction === DIRECTION.WEST) targetDirection = DIRECTION.SOUTH
+      if( robotPosition.direction === DIRECTION.SOUTH) targetDirection = DIRECTION.EAST
+      if( robotPosition.direction === DIRECTION.EAST)  targetDirection = DIRECTION.NORTH
+
+      setRobotPosition({ ...robotPosition, direction: targetDirection})   
+    }
+
+
+    if( commandList.length === 0){
+      setInterval(null)
+      setTimeout(1000)
+    }
   }, interval)
 
   console.log("ROBOT POSITION", robotPosition)
+  useTimeout( () => {
+    console.log("timout ....  ")
+    setShowReport(false)
+    setExecutingText(null)
+  }, timeout)
 
+  // -----------------------
+  // HANDLERS
+  // -----------------------
+
+  const onExecute = async (e) => {
+    const commandList = commandString.split('\n')
+    setCommandList(commandList)
+    setInterval(1000)
+  }
+
+  const onFileChange = async (e) => {
+    var file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.readAsText(file, "UTF-8");
+        reader.onload = function (evt) {
+          setCommandString(evt.target.result)
+        }
+        reader.onerror = function (evt) {
+          setCommandString("ERRROR READING FILE")
+        }
+    }
+  }
 
   // Compute class robot
   let classRobot = ""
@@ -119,7 +192,7 @@ const App = () => {
   let left = 0;
   if( boardRef.current){
     top = height*((BOARD_SIZE-1)-robotPosition.y);
-    left = width*robotPosition.x ;
+    left = width*(robotPosition.x) ;
   }
 
   return <main className="vh-100 vw-100 d-flex flex-column">
@@ -131,14 +204,14 @@ const App = () => {
             <div className="w-50 p-3 d-flex flex-column" >
               <h2>Board</h2>
               <div className="flex-grow-1 position-relative" ref={boardRef}>
-                <div className="robot-container position-absolute text-center p-2" 
+                <div className="robot-container position-absolute text-center" 
                   style={{ 
                     width: width, height: height, 
                     top: top, 
                     left: left,
-                    background: 'green'
+                    background:'green'
                   }}>
-                  <img className={classRobot} src={robot} alt="robot" style={{ height: '100%'}} /> 
+                    <img className={classRobot} src={robot} alt="robot" style={{ height: '100%'}} /> 
                 </div>
                 <BoardRow height={height} width={width} row={0} robotPosition={robotPosition} />
                 <BoardRow height={height} width={width} row={1} robotPosition={robotPosition} />
@@ -149,23 +222,31 @@ const App = () => {
             </div>
 
             <div className="w-50 p-3">
-              <div className='h-50  d-flex flex-column'>
+              <div className='h-75  d-flex flex-column'>
                 <h2>Commands</h2>
                 <textarea className="form-control flex-grow-1" 
-                  style={{ fontFamily: 'Consolas'}} onChange={(e) => setCommandString(e.target.value)}></textarea>
-              
+                  style={{ fontFamily: 'Consolas'}} value={commandString} 
+                  onChange={(e) => setCommandString(e.target.value)}></textarea>
+                <div className="mt-3">
+                  <input className="form-control" type="file" onChange={e => onFileChange(e)} />
+                </div>
+                {executingText &&
+                  <div className='mt-3'>
+                    <input className='form-control' value={executingText} disabled></input>
+                  </div>
+                }
                 <div className='text-end'>
                   <button className='btn btn-primary mt-3 w-50' onClick={(e) => onExecute(e)}>Execute</button>
                 </div>
               </div>
+              {showReport &&
               <div className='mt-3'>
                 <div className='alert alert-success text-center'> 
                   <div><b>REPORT</b></div>
-                  <div>X: {robotPosition.x} Y: {robotPosition.y} DIRECTION: {robotPosition.direction}</div>
-                  
-                  
+                  <div>X: {robotPosition.x} Y: {robotPosition.y} DIRECTION: {robotPosition.direction}</div>                                  
                 </div>
               </div>
+              }
             </div>
 
 
