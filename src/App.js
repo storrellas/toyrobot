@@ -68,13 +68,14 @@ const App = () => {
   const boardRef = useRef(null);
   const [height, setHeight] = useState(0);
   const [width, setWidth] = useState(0);
-  const [ robotPosition, setRobotPosition ] = useState({ x: 3, y: 1, direction: DIRECTION.NORTH});
+  const [ robotPosition, setRobotPosition ] = useState({ x: 0, y: 0, direction: DIRECTION.NORTH});
   const [ commandString, setCommandString ] = useState('')
   const [ commandList, setCommandList ] = useState([])
   const [ interval, setInterval ] = useState(null)
   const [ timeout, setTimeout ] = useState(null)
   const [ showReport, setShowReport ] = useState(false)
   const [ executingText, setExecutingText ] = useState(null)
+  const [ errorText, setErrorText] = useState(false)
 
   useEffect( () => {
     const width = boardRef.current ? boardRef.current.clientWidth : 0
@@ -91,18 +92,28 @@ const App = () => {
 
 
   useInterval(() => {
-    
+    // Extract command    
     const command = commandList.shift().trim()
-    setExecutingText(`Executing ${command}`)
-
     const commandSplit = command.split(' ')
     const commandKey = commandSplit[0]
+    setExecutingText(command)
     // PLACE
     if(commandKey === 'PLACE'){
       const position = commandSplit[1].split(',')
-      setRobotPosition({ x: parseInt(position[0]), y: parseInt(position[1]), direction: position[2].trim()})
+      const x = parseInt(position[0])
+      const y = parseInt(position[1])
+      const direction = position[2].trim()
+      if( x < 0 || x > 4 || y < 0 || y > 4) {
+        setErrorText(`ERROR ON COMMAND: '${command}'`)
+        setInterval(null)
+        setTimeout(1000)
+        return
+      }
       
+      // Set robot position
+      setRobotPosition({ x, y, direction})      
     }
+
     // MOVE
     if( commandKey === 'MOVE' ){
       if( robotPosition.direction === DIRECTION.NORTH && robotPosition.y < 4) {
@@ -110,9 +121,14 @@ const App = () => {
       }else if( robotPosition.direction === DIRECTION.SOUTH && robotPosition.y > 0) {
         setRobotPosition({ ...robotPosition, y: robotPosition.y - 1})
       }else if( robotPosition.direction === DIRECTION.WEST && robotPosition.x < 4) {
-        setRobotPosition({ ...robotPosition, x: robotPosition.x + 1})
-      }else if( robotPosition.direction === DIRECTION.EAST && robotPosition.x > 0) {
         setRobotPosition({ ...robotPosition, x: robotPosition.x - 1})
+      }else if( robotPosition.direction === DIRECTION.EAST && robotPosition.x > 0) {
+        setRobotPosition({ ...robotPosition, x: robotPosition.x + 1})
+      }else{
+        setErrorText(`ERROR ON COMMAND: '${command}'`)
+        setInterval(null)
+        setTimeout(1000)
+        return
       }
     }
 
@@ -128,6 +144,7 @@ const App = () => {
       if( robotPosition.direction === DIRECTION.SOUTH) targetDirection = DIRECTION.WEST
       if( robotPosition.direction === DIRECTION.WEST)  targetDirection = DIRECTION.NORTH
 
+      // Set robot position
       setRobotPosition({ ...robotPosition, direction: targetDirection})      
     }    
 
@@ -139,6 +156,7 @@ const App = () => {
       if( robotPosition.direction === DIRECTION.SOUTH) targetDirection = DIRECTION.EAST
       if( robotPosition.direction === DIRECTION.EAST)  targetDirection = DIRECTION.NORTH
 
+      // Set robot position
       setRobotPosition({ ...robotPosition, direction: targetDirection})   
     }
 
@@ -149,10 +167,7 @@ const App = () => {
     }
   }, interval)
 
-  console.log("ROBOT POSITION", robotPosition)
   useTimeout( () => {
-    console.log("timout ....  ")
-    setShowReport(false)
     setExecutingText(null)
   }, timeout)
 
@@ -162,8 +177,18 @@ const App = () => {
 
   const onExecute = async (e) => {
     const commandList = commandString.split('\n')
-    setCommandList(commandList)
+    const commandListProcessed = []
+    // Ignore all commands before the first PLACE
+    for( const command of commandList){
+      if( commandListProcessed.length > 0 ) commandListProcessed.push(command)
+      else{
+        if( command.startsWith('PLACE') ) commandListProcessed.push(command)
+      }
+    }
+    console.log("commandListProcessed", commandListProcessed)
+    setCommandList(commandListProcessed)
     setInterval(1000)
+    setErrorText(null)
   }
 
   const onFileChange = async (e) => {
@@ -180,6 +205,8 @@ const App = () => {
     }
   }
 
+
+  console.log("ROBOT POSITION", robotPosition)
   // Compute class robot
   let classRobot = ""
   if (robotPosition.direction === DIRECTION.NORTH) classRobot = "robot-up"
@@ -244,6 +271,13 @@ const App = () => {
                 <div className='alert alert-success text-center'> 
                   <div><b>REPORT</b></div>
                   <div>X: {robotPosition.x} Y: {robotPosition.y} DIRECTION: {robotPosition.direction}</div>                                  
+                </div>
+              </div>
+              }
+              {errorText &&
+              <div className='mt-3'>
+                <div className='alert alert-danger text-center'> 
+                  <div>{errorText}</div>
                 </div>
               </div>
               }
